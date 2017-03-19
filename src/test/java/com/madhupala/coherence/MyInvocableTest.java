@@ -15,7 +15,6 @@ public class MyInvocableTest {
     @Test
     public void testInvocable() {
 
-
         NamedCache cache = CacheFactory.getCache("dist-extend");
         Integer IValue = (Integer) cache.get("key");
         if (IValue == null) {

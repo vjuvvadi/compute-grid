@@ -9,15 +9,16 @@
         </cache-mapping>
         <cache-mapping>
             <cache-name>price-array-grid</cache-name>
-            <scheme-name>price-array-grid-scheme</scheme-name>
+            <scheme-name>price-array-grid-repl-scheme</scheme-name>
         </cache-mapping>
     </caching-scheme-mapping>
 
 
     <caching-schemes>
+
         <distributed-scheme>
-            <scheme-name>price-array-grid-scheme</scheme-name>
-            <service-name>price-array-grid-service</service-name>
+            <scheme-name>price-array-grid-dist-scheme</scheme-name>
+            <service-name>price-array-grid-dist-service</service-name>
             <thread-count>5</thread-count>
             <partition-count>1021</partition-count>
             <backing-map-scheme>
@@ -27,6 +28,16 @@
             </backing-map-scheme>
             <autostart>true</autostart>
         </distributed-scheme>
+
+        <replicated-scheme>
+            <scheme-name>price-array-grid-repl-scheme</scheme-name>
+            <backing-map-scheme>
+                <class-scheme>
+                    <class-name>com.tangosol.util.SafeHashMap</class-name>
+                </class-scheme>
+            </backing-map-scheme>
+            <autostart>true</autostart>
+        </replicated-scheme>
 
         <distributed-scheme>
             <scheme-name>compute-grid-scheme</scheme-name>
