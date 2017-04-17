@@ -1,9 +1,9 @@
 package com.madhupala.coherence;
 
 import com.oracle.tools.deferred.Eventually;
+import com.oracle.tools.runtime.LocalPlatform;
 import com.oracle.tools.runtime.coherence.*;
 import com.oracle.tools.runtime.console.SystemApplicationConsole;
-import com.oracle.tools.runtime.java.JavaVirtualMachine;
 import com.oracle.tools.runtime.java.options.HeapSize;
 import com.oracle.tools.runtime.network.AvailablePortIterator;
 import com.tangosol.net.CacheFactory;
@@ -38,12 +38,11 @@ public class ClusterTest {
         CoherenceClusterMemberSchema extend = createExtendProxySchema(ports);
 
 
-
         CoherenceClusterBuilder clusterBuilder = new CoherenceClusterBuilder();
-        clusterBuilder.addSchema("Data", storage, 2,
-                JavaVirtualMachine.getInstance(), HeapSize.useDefaults());
+        clusterBuilder.addSchema("Data", storage, 1,
+                LocalPlatform.getInstance(), HeapSize.useDefaults());
         clusterBuilder.addSchema("Proxy", extend, 1,
-                JavaVirtualMachine.getInstance(), HeapSize.useDefaults());
+                LocalPlatform.getInstance(), HeapSize.useDefaults());
 
 
         cluster = clusterBuilder.realize(new SystemApplicationConsole());
@@ -53,7 +52,7 @@ public class ClusterTest {
     public void setupTest() throws Exception {
         // Assert the cluster is ready
         Assert.assertThat(cluster, is(notNullValue()));
-        Eventually.assertThat(eventually(invoking(cluster).getClusterSize()), is(3));
+        Eventually.assertThat(eventually(invoking(cluster).getClusterSize()), is(2));
 
         // Assert the Proxy Service is running
         assertServiceIsRunning("Proxy-1", "TcpProxyService");
@@ -61,10 +60,12 @@ public class ClusterTest {
         // Get the extend port the proxy is using
         CoherenceClusterMember proxyNode = cluster.get("Proxy-1");
         String extendPort = proxyNode.getSystemProperty("tangosol.coherence.extend.port");
+        String extendPort2 = proxyNode.getSystemProperty("tangosol.coherence.extend.port2");
 
         // Create the client properties
         Properties properties = new Properties(System.getProperties());
         properties.setProperty("tangosol.coherence.extend.port", extendPort);
+        properties.setProperty("tangosol.coherence.extend.port2", extendPort2);
 
         // Create the client Cache Factory
         clientCacheFactory = createClientCacheFactory("client-cache-config.xml", properties);
@@ -73,7 +74,7 @@ public class ClusterTest {
     @Test
     public void shouldPutDataIntoCache() throws Exception {
 
-        NamedCache cache = clientCacheFactory.ensureCache("dist-test", null);
+        NamedCache cache = clientCacheFactory.ensureCache("dist-storage-grid-service", null);
         cache.put("Key-1", "Value-1");
         Assert.assertThat((String) cache.get("Key-1"), is("Value-1"));
     }
@@ -101,18 +102,21 @@ public class ClusterTest {
     public static CoherenceClusterMemberSchema createExtendProxySchema(AvailablePortIterator ports) {
         return createCommonSchema(ports)
                 .setStorageEnabled(false)
-                .setSystemProperty("tangosol.coherence.extend.enabled", true)
-                .setSystemProperty("tangosol.coherence.extend.port", ports);
+                .setSystemProperty("tangosol.coherence.extend.enabled", true);
+
     }
 
     public static CoherenceCacheServerSchema createCommonSchema(AvailablePortIterator ports) {
 
+        String file = ClusterTest.class.getClassLoader()
+                .getResource("server-cache-config.xml").getFile();
+
         return new CoherenceCacheServerSchema()
-                .setCacheConfigURI("coherence-cache-config.xml")
-                .setPofEnabled(true)
-                .setPofConfigURI("pof-config.xml")
+                .setCacheConfigURI(file)
                 .setClusterPort(12345)
-                .setJMXPort(ports)
+                .setJMXPort(ports.next())
+                .setSystemProperty("tangosol.coherence.extend.port", ports.next())
+                .setSystemProperty("tangosol.coherence.extend.port2", ports.next())
                 .setJMXManagementMode(JMXManagementMode.LOCAL_ONLY);
 
     }
